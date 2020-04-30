@@ -1,7 +1,16 @@
 #!/bin/bash
 
+if [ $# -eq 0 ]
+  then
+    no_args="True"
+fi
+
 # working directory
 script_directory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+######## Default Variables
+dev_path_variable="$script_directory/development"
+env_template=""
 
 # check for git
 git_version=$(/usr/bin/git --version)
@@ -19,12 +28,24 @@ if [[ ! "$composer_path" ]]; then
     composer_path="$script_directory/composer"
 fi
 
-if [[ ! "$1" ]]; then
-    echo "No argument given, we will use ./development for our dev environment."
-    dev_path="$script_directory/development"
+if [[ "$no_args" = "True" ]]; then
+    while [ ! -d "$dev_path" ];
+        do
+            echo -e "Please specific the directory to where MunkiReport should be installed:"
+            read dev_path
+            if [ ! -d "$dev_path" ]; then
+	            read -p "$dev_path does not exist. Create inside current directory (y/N)? " create_path
+                case ${create_path:0:1} in
+	            [yY]) mkdir -p "$dev_path"
+                echo "Directory created at $script_directory/$dev_path";;
+                *) echo ;;
+                esac
+            fi
+        done
+    dev_path="$script_directory/$dev_path"
 else
-    echo "Our dev env will be built at $1"
-    dev_path="$1"
+    echo "We will use $dev_path_variable for our dev environment."
+    dev_path="$dev_path_variable"
 fi
 
 if [[ ! -d "$dev_path" ]]; then
@@ -46,9 +67,14 @@ fi
 
 cd "$munkireport_dev_path" || return
 
-# git checkout tags/v2.7.1
-# git checkout master
-git checkout wip
+echo -e "Please specific the branch to use (or press enter use master)" 
+read branch
+
+if [ -n "${branch}" ]; then 
+    git checkout "$branch" || echo "Branch does not exist, staying on master."
+else
+    git checkout master
+fi
 
 git pull
 
@@ -57,16 +83,15 @@ git pull
 
 ############# setup .env
 
-# look for a argument for .env template -e or --env
-
 cd "$munkireport_dev_path" || return
 
-env=$(/Users/crain1jp/Projects/munkireport/dev.env)
+current_env="$munkireport_dev_path/.env"
 
-if [[ $env ]]; then
-    cp "$env" ./.env
-else
+if [[ ! -f $current_env ]]; then
+    echo "Creating a default .env file with NOAUTH"
     echo 'AUTH_METHODS="NOAUTH"' > .env
+else
+    echo ".env already exists, we will continue using."
 fi
 
 ############# Run composer
@@ -79,29 +104,112 @@ cd "$munkireport_dev_path" || return
 
 ############# Look for module dev arg and bring those in -m or --module
 
-module_path="$dev_path/modules"
+cd "$dev_path" || return
 
-if [[ ! -d "$module_path" ]]; then
-    echo "Making modules directory"
-    mkdir "$dev_path/modules"
-fi
+if [[ "$no_args" = "True" ]]; then
+    read -p "Would you like to clone existing core modules to work on (y/N)? " work_on_modules
+    case ${work_on_modules:0:1} in
+    [yY]) while [ ! -d "$module_path" ];
+            do
+                echo -e "Please specific the directory to where MunkiReport modules should be installed:"
+                read module_path
+                if [ ! -d "$module_path" ]; then
+                    read -p "$module_path does not exist. Create inside $dev_path (y/N)? " create_path
+                    case ${create_path:0:1} in
+                    [yY]) mkdir -p "$dev_path/$module_path"
+                    echo "Directory for modules created at $dev_path/$module_path"
+                    module_path="$dev_path/$module_path";;
+                    *) echo ;;
+                    esac
+                fi
+            done
 
-cd "$module_path" || return
+    cd "$dev_path" || return
 
-# Clone all modules that are in core
-for i in "$munkireport_dev_path"/vendor/munkireport/*; do
-    module="$(basename $i)"
-    if [[ ! -d "$module_path/$module" ]]; then
-        echo "$module does not exist"
-        git clone https://github.com/munkireport/"$module"
-    else
-        echo "$module exists, pull latest"
-        cd "$module_path/$module"
-        git pull || echo "error with pulling, you may have local commits"
-        cd ../
-    fi
-done
-echo "MODULE_SEARCH_PATHS=$module_path" >> "$munkireport_dev_path"/.env
+    cd "$module_path" || return
+
+    # Clone all modules that are in core
+    for i in "$munkireport_dev_path"/vendor/munkireport/*; do
+        module="$(basename $i)"
+        if [[ ! -d "$module" ]]; then
+            echo "$module does not exist"
+            git clone https://github.com/munkireport/"$module"
+        else
+            echo "$module exists, pull latest"
+            cd "$module"
+            git pull || echo "error with pulling, you may have local commits"
+            cd ../
+        fi
+    done
+    echo "MODULE_SEARCH_PATHS=$module_path" >> "$munkireport_dev_path"/.env;;
+    *) echo ;;
+    esac
+fi 
+
+cd "$dev_path" || return
+
+if [[ "$no_args" = "True" ]]; then
+    read -p "Would you like to clone Tuxudo's modules to work on (y/N)? " work_on_tux
+    case ${work_on_tux:0:1} in
+    [yY]) while [ ! -d "$module_path" ];
+            do
+                echo -e "Please specific the directory to where MunkiReport modules should be installed:"
+                read module_path
+                if [ ! -d "$module_path" ]; then
+                    read -p "$module_path does not exist. Create inside $dev_path (y/N)? " create_path
+                    case ${create_path:0:1} in
+                    [yY]) mkdir -p "$dev_path/$module_path"
+                    echo "Directory for modules created at $dev_path/$module_path"
+                    module_path="$dev_path/$module_path";;
+                    *) echo ;;
+                    esac
+                fi
+            done
+
+    cd "$munkireport_dev_path" || return
+
+    # load tux modules
+    echo '''{
+    "require": {
+        "tuxudo/thunderbolt": "^1.0",
+        "tuxudo/teamviewer": "^1.0",
+        "tuxudo/ms_office": "^1.0",
+        "tuxudo/memory": "^1.0",
+        "tuxudo/launchdaemons": "^1.0",
+        "tuxudo/kernel_panics": "^1.0",
+        "tuxudo/ios_devices": "^1.0",
+        "tuxudo/icloud": "^1.0",
+        "tuxudo/users": "^1.0",
+        "tuxudo/system_version": "^1.0",
+        "tuxudo/snowagent": "^1.0",
+        "tuxudo/jamf": "^1.0",
+        "tuxudo/firewall": "^1.0",
+        "tuxudo/extension_attributes": "^1.0"
+    }
+}''' > "$munkireport_dev_path/composer.local.json"
+    "$composer_path" update --no-dev
+
+    cd "$dev_path" || return
+
+    cd "$module_path" || return
+
+    for i in "$munkireport_dev_path"/vendor/tuxudo/*; do
+        module="$(basename $i)"
+        if [[ ! -d "$module" ]]; then
+            echo "$module does not exist"
+            git clone https://github.com/tuxudo/"$module"
+        else
+            echo "$module exists, pull latest"
+            cd "$module"
+            git pull || echo "error with pulling, you may have local commits"
+            cd ../
+        fi
+    done
+    echo "MODULE_SEARCH_PATHS=$module_path" >> "$munkireport_dev_path"/.env;;
+    *) echo ;;
+    esac
+fi 
+
 
 ############# Run database migrations
 
@@ -112,6 +220,28 @@ php database/migrate.php
 php database/migrate.php
 # one more time won't hurt anything :) 
 php database/migrate.php
+
+############# enable all modules?
+
+if [[ "$no_args" = "True" ]]; then
+    read -p "Would you like to enable all modules (y/N)? " enable
+    case ${enable:0:1} in
+    [yY]) modules=""
+    for i in "$munkireport_dev_path"/vendor/munkireport/*; do
+        module="$(basename $i)"
+        modules="$modules,$module"
+    done
+    if [ -d "$munkireport_dev_path/vendor/tuxudo" ]; then
+        for i in "$munkireport_dev_path"/vendor/tuxudo/*; do
+            module="$(basename $i)"
+            modules="$modules,$module"
+        done
+    fi  
+    echo "MODULES=\"$modules\"" >> .env;;
+    *) echo ;;
+    esac
+fi 
+
 
 ############# check for explicit port -p or --port
 
