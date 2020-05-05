@@ -257,10 +257,7 @@ fi
 cd "$munkireport_dev_path" || return
 
 php database/migrate.php
-# again in case we missed something
-php database/migrate.php
-# one more time won't hurt anything :) 
-php database/migrate.php
+
 
 ############# enable all modules?
 
@@ -298,14 +295,25 @@ server_name="localhost"
 port=8080
 
 ############# check for autostart -s or --start
-# may want to run in background
 
-cd "$munkireport_dev_path" || return
+read -p "Would you like to start the web server now (y/N)? " enable
+case ${enable:0:1} in
+[yY]) cd "$munkireport_dev_path" || return
 
-php -S "$server_name":"$port" -t public
+php -S "$server_name":"$port" -t public &>/dev/null &
+pid=$!
+echo "Kill the webserver by running \"kill $!\""
 
 ############# Install client locally if running in background
-# munkireport_url="http://"$server_name":"$port"/index.php?"
-# elevate to root?
-# /bin/bash -c "$(curl -s $munkireport_url/install)"
-# /usr/local/munkireport/munkireport-runner
+    read -p "Would you like to install client locally (y/N)? " enable
+    case ${enable:0:1} in
+    [yY]) munkireport_url="http://"$server_name":"$port"/index.php?"
+    # elevate to root
+    sudo /bin/bash -c "$(curl -s $munkireport_url/install)"
+    sudo /usr/local/munkireport/munkireport-runner;;
+    *) echo ;;
+    esac;;
+*) echo ;;
+esac
+
+echo "MunkiReport is available at \"http://"$server_name":"$port"/\", you can kill the webserver by running \"kill $pid\""
