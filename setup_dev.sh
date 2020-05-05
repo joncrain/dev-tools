@@ -36,6 +36,7 @@ if [[ ! "$composer_path" ]]; then
 
     php composer-setup.php --filename composer
     RESULT=$?
+    rm composer-setup.php
     composer_path="$script_directory/composer"
 fi
 
