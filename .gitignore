@@ -26,4 +26,4 @@ local/module_configs/*.yml
 .php_cs.cache
 composer
 
-development/
+development*/

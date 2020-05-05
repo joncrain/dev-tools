@@ -24,7 +24,18 @@ fi
 composer_path=$(/usr/bin/which composer)
 
 if [[ ! "$composer_path" ]]; then 
-    ./setup_composer.sh
+    EXPECTED_CHECKSUM="$(curl --silent https://composer.github.io/installer.sig)"
+    php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+    ACTUAL_CHECKSUM="$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
+
+    if [ "$EXPECTED_CHECKSUM" != "$ACTUAL_CHECKSUM" ]
+    then
+        >&2 echo 'ERROR: Invalid installer checksum'
+        exit 1
+    fi
+
+    php composer-setup.php --filename composer
+    RESULT=$?
     composer_path="$script_directory/composer"
 fi
 
@@ -179,7 +190,6 @@ if [[ "$no_args" = "True" ]]; then
         "tuxudo/kernel_panics": "^1.0",
         "tuxudo/ios_devices": "^1.0",
         "tuxudo/icloud": "^1.0",
-        "tuxudo/users": "^1.0",
         "tuxudo/system_version": "^1.0",
         "tuxudo/snowagent": "^1.0",
         "tuxudo/jamf": "^1.0",
@@ -211,6 +221,36 @@ if [[ "$no_args" = "True" ]]; then
 fi 
 
 
+################ Create a new module ?
+
+if [[ "$no_args" = "True" ]]; then
+    read -p "Would you like to create a new module to work on (y/N)? " new_module
+    case ${new_module:0:1} in
+    [yY]) while [ ! -d "$module_path" ];
+            do
+                echo -e "Please specific the directory to where MunkiReport modules should be installed:"
+                read module_path
+                if [ ! -d "$module_path" ]; then
+                    read -p "$module_path does not exist. Create inside $dev_path (y/N)? " create_path
+                    case ${create_path:0:1} in
+                    [yY]) mkdir -p "$dev_path/$module_path"
+                    echo "Directory for modules created at $dev_path/$module_path"
+                    module_path="$dev_path/$module_path";;
+                    *) echo ;;
+                    esac
+                fi
+            done
+
+    cd "$module_path" || return
+
+    echo -e "Please specific the name for your new module:"
+    read module_name
+    "$munkireport_dev_path"/build/addmodule.sh "$module_name"
+    echo "MODULE_SEARCH_PATHS=$module_path" >> "$munkireport_dev_path"/.env;;
+    *) echo ;;
+    esac
+fi 
+
 ############# Run database migrations
 
 cd "$munkireport_dev_path" || return
@@ -233,6 +273,12 @@ if [[ "$no_args" = "True" ]]; then
     done
     if [ -d "$munkireport_dev_path/vendor/tuxudo" ]; then
         for i in "$munkireport_dev_path"/vendor/tuxudo/*; do
+            module="$(basename $i)"
+            modules="$modules,$module"
+        done
+    fi
+    if [ -d "$module_path" ]; then
+        for i in "$module_path"/*; do
             module="$(basename $i)"
             modules="$modules,$module"
         done
