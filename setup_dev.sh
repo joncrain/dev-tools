@@ -11,6 +11,7 @@ script_directory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pw
 ######## Default Variables
 dev_path_variable="$script_directory/development"
 env_template=""
+modulepath=""
 
 # check for git
 git_version=$(/usr/bin/git --version)
@@ -110,7 +111,7 @@ fi
 
 cd "$munkireport_dev_path" || return
 
-"$composer_path" update --no-dev
+"$composer_path" update
 # "$composer_path" install --no-dev --no-suggest --optimize-autoloader
 # "$composer_path" dumpautoload --optimize --no-dev
 
@@ -141,7 +142,7 @@ if [[ "$no_args" = "True" ]]; then
     cd "$module_path" || return
 
     # Clone all modules that are in core
-    for i in "$munkireport_dev_path"/vendor/munkireport/*; do
+    for i in ../vendor/munkireport/*; do
         module="$(basename $i)"
         if [[ ! -d "$module" ]]; then
             echo "$module does not exist"
@@ -198,13 +199,13 @@ if [[ "$no_args" = "True" ]]; then
         "tuxudo/extension_attributes": "^1.0"
     }
 }''' > "$munkireport_dev_path/composer.local.json"
-    "$composer_path" update --no-dev
+    "$composer_path" update
 
     cd "$dev_path" || return
 
     cd "$module_path" || return
 
-    for i in "$munkireport_dev_path"/vendor/tuxudo/*; do
+    for i in ../vendor/tuxudo/*; do
         module="$(basename $i)"
         if [[ ! -d "$module" ]]; then
             echo "$module does not exist"
@@ -313,6 +314,12 @@ echo "Kill the webserver by running \"kill $!\""
     sudo /usr/local/munkireport/munkireport-runner;;
     *) echo ;;
     esac;;
+*) echo ;;
+esac
+
+read -p "Would you like to install fake data (y/N)? " enable
+case ${enable:0:1} in
+[yY]) php "$munkireport_dev_path"/database/faker.php;;
 *) echo ;;
 esac
 
