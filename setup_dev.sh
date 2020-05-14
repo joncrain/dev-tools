@@ -142,7 +142,8 @@ if [[ "$no_args" = "True" ]]; then
     cd "$module_path" || return
 
     # Clone all modules that are in core
-    for i in ../vendor/munkireport/*; do
+    for i in "$munkireport_dev_path"/vendor/munkireport/*; do
+        echo $i
         module="$(basename $i)"
         if [[ ! -d "$module" ]]; then
             echo "$module does not exist"
@@ -205,7 +206,7 @@ if [[ "$no_args" = "True" ]]; then
 
     cd "$module_path" || return
 
-    for i in ../vendor/tuxudo/*; do
+    for i in "$munkireport_dev_path"/vendor/tuxudo/*; do
         module="$(basename $i)"
         if [[ ! -d "$module" ]]; then
             echo "$module does not exist"
