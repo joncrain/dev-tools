@@ -122,20 +122,7 @@ cd "$dev_path" || return
 if [[ "$no_args" = "True" ]]; then
     read -p "Would you like to clone existing core modules to work on (y/N)? " work_on_modules
     case ${work_on_modules:0:1} in
-    [yY]) while [ ! -d "$module_path" ];
-            do
-                echo -e "Please specific the directory to where MunkiReport modules should be installed:"
-                read module_path
-                if [ ! -d "$module_path" ]; then
-                    read -p "$module_path does not exist. Create inside $dev_path (y/N)? " create_path
-                    case ${create_path:0:1} in
-                    [yY]) mkdir -p "$dev_path/$module_path"
-                    echo "Directory for modules created at $dev_path/$module_path"
-                    module_path="$dev_path/$module_path";;
-                    *) echo ;;
-                    esac
-                fi
-            done
+    [yY]) module_path="$dev_path/local/modules/"
 
     cd "$dev_path" || return
 
@@ -150,12 +137,11 @@ if [[ "$no_args" = "True" ]]; then
             git clone https://github.com/munkireport/"$module"
         else
             echo "$module exists, pull latest"
-            cd "$module"
+            cd "$module" || return
             git pull || echo "error with pulling, you may have local commits"
             cd ../
         fi
-    done
-    echo "MODULE_SEARCH_PATHS=$module_path" >> "$munkireport_dev_path"/.env;;
+    done;;
     *) echo ;;
     esac
 fi 
@@ -165,20 +151,7 @@ cd "$dev_path" || return
 if [[ "$no_args" = "True" ]]; then
     read -p "Would you like to clone Tuxudo's modules to work on (y/N)? " work_on_tux
     case ${work_on_tux:0:1} in
-    [yY]) while [ ! -d "$module_path" ];
-            do
-                echo -e "Please specific the directory to where MunkiReport modules should be installed:"
-                read module_path
-                if [ ! -d "$module_path" ]; then
-                    read -p "$module_path does not exist. Create inside $dev_path (y/N)? " create_path
-                    case ${create_path:0:1} in
-                    [yY]) mkdir -p "$dev_path/$module_path"
-                    echo "Directory for modules created at $dev_path/$module_path"
-                    module_path="$dev_path/$module_path";;
-                    *) echo ;;
-                    esac
-                fi
-            done
+    [yY]) module_path="$dev_path/local/modules/"
 
     cd "$munkireport_dev_path" || return
 
@@ -217,39 +190,7 @@ if [[ "$no_args" = "True" ]]; then
             git pull || echo "error with pulling, you may have local commits"
             cd ../
         fi
-    done
-    echo "MODULE_SEARCH_PATHS=$module_path" >> "$munkireport_dev_path"/.env;;
-    *) echo ;;
-    esac
-fi 
-
-
-################ Create a new module ?
-
-if [[ "$no_args" = "True" ]]; then
-    read -p "Would you like to create a new module to work on (y/N)? " new_module
-    case ${new_module:0:1} in
-    [yY]) while [ ! -d "$module_path" ];
-            do
-                echo -e "Please specific the directory to where MunkiReport modules should be installed:"
-                read module_path
-                if [ ! -d "$module_path" ]; then
-                    read -p "$module_path does not exist. Create inside $dev_path (y/N)? " create_path
-                    case ${create_path:0:1} in
-                    [yY]) mkdir -p "$dev_path/$module_path"
-                    echo "Directory for modules created at $dev_path/$module_path"
-                    module_path="$dev_path/$module_path";;
-                    *) echo ;;
-                    esac
-                fi
-            done
-
-    cd "$module_path" || return
-
-    echo -e "Please specific the name for your new module:"
-    read module_name
-    "$munkireport_dev_path"/build/addmodule.sh "$module_name"
-    echo "MODULE_SEARCH_PATHS=$module_path" >> "$munkireport_dev_path"/.env;;
+    done;;
     *) echo ;;
     esac
 fi 
@@ -260,6 +201,21 @@ cd "$munkireport_dev_path" || return
 
 php database/migrate.php
 
+################ Create a new module ?
+
+if [[ "$no_args" = "True" ]]; then
+    read -p "Would you like to create a new module to work on (y/N)? " new_module
+    case ${new_module:0:1} in
+    [yY]) module_path="$dev_path/local/modules/"
+
+    cd "$module_path" || return
+
+    echo -e "Please specific the name for your new module:"
+    read module_name
+    "$munkireport_dev_path"/build/addmodule.sh "$module_name";;
+    *) echo ;;
+    esac
+fi 
 
 ############# enable all modules?
 
@@ -288,6 +244,13 @@ if [[ "$no_args" = "True" ]]; then
     esac
 fi 
 
+############ Add fake data
+
+read -p "Would you like to install fake data (y/N)? " enable
+case ${enable:0:1} in
+[yY]) php "$munkireport_dev_path"/database/faker.php;;
+*) echo ;;
+esac
 
 ############# check for explicit port -p or --port
 
@@ -315,12 +278,6 @@ echo "Kill the webserver by running \"kill $!\""
     sudo /usr/local/munkireport/munkireport-runner;;
     *) echo ;;
     esac;;
-*) echo ;;
-esac
-
-read -p "Would you like to install fake data (y/N)? " enable
-case ${enable:0:1} in
-[yY]) php "$munkireport_dev_path"/database/faker.php;;
 *) echo ;;
 esac
 
