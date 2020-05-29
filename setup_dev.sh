@@ -186,7 +186,7 @@ if [[ "$no_args" = "True" ]]; then
             git clone https://github.com/tuxudo/"$module"
         else
             echo "$module exists, pull latest"
-            cd "$module"
+            cd "$module" || exit
             git pull || echo "error with pulling, you may have local commits"
             cd ../
         fi
